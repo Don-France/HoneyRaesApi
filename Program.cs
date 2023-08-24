@@ -117,6 +117,7 @@ app.MapGet("/employees", () =>
 {
     return employees;
 });
+// For reference to the following look at Book 2 chapter 5
 app.MapGet("/employees/{id}", (int id) =>
 {
     Employee employee = employees.FirstOrDefault(e => e.Id == id);
@@ -139,6 +140,7 @@ app.MapGet("/customers/{id}", (int id) =>
     {
         return Results.NotFound();
     }
+    customer.ServiceTickets = serviceTickets.Where(st => st.CustomerId == id).ToList();
     return Results.Ok(customer);
 });
 
@@ -154,9 +156,64 @@ app.MapGet("/servicetickets/{id}", (int id) =>
     {
         return Results.NotFound();
     }
+    // Adding employee data in the serviveTicket object
     serviceTicket.Employee = employees.FirstOrDefault(e => e.Id == serviceTicket.EmployeeId);
     serviceTicket.Customer = customers.FirstOrDefault(c => c.Id == serviceTicket.CustomerId);
     return Results.Ok(serviceTicket);
+});
+
+app.MapPost("/servicetickets", (ServiceTicket serviceTicket) =>
+{
+    // creates a new id (When we get to it later, our SQL database will do this for us like JSON Server did!)
+    serviceTicket.Id = serviceTickets.Count > 0 ? serviceTickets.Max(st => st.Id) + 1 : 1;
+    serviceTickets.Add(serviceTicket);
+    return serviceTicket;
+});
+
+app.MapDelete("/serviceTickets/{id}", (int id) =>
+{
+    ServiceTicket serviceTicket = serviceTickets.FirstOrDefault(st => st.Id == id);
+
+}
+);
+/*Using the MapPut method creates the endpoint with a route pattern that takes the URL and a placeholder for the id(serviceTicketsId) and will be triggered when the PUT request is made to the API.
+The handler takes id(ServiceTicketId) and ServiceTicket(object)  as parameters and using an anonymous/ lambda function handles the incoming request
+*/
+app.MapPut("/servicetickets/{id}", (int id, ServiceTicket serviceTicket) =>
+{
+    // ServiceTicket ticketToUpdate gets the serviceTicket that corresponds to the matching id in the URL
+    ServiceTicket ticketToUpdate = serviceTickets.FirstOrDefault(st => st.Id == id);
+    // serviceTicket.InexOf(ticketToUpdate) gets the index of the serviceTicket object that was assigned to ticketToUpdate and assigns it's value to ticketIndex
+    int ticketIndex = serviceTickets.IndexOf(ticketToUpdate);
+    // If the ticket doesn't exist return NotFound
+    if (ticketToUpdate == null)
+    {
+        return Results.NotFound();
+    }
+    //If the id in the request route doesn't match the id from the ticket in the request body. That's a bad request!
+    if (id != serviceTicket.Id)
+    {
+        return Results.BadRequest();
+    }
+    // This accesses the object in the serviceTickets list that is specified by the ticketIndex and updates the object in the list
+    serviceTickets[ticketIndex] = serviceTicket;
+    return Results.Ok();
+});
+
+app.MapPost("/servicetickets/{id}/complete", (int id, ServiceTicket serviceTicket) =>
+{
+    ServiceTicket ticketToComplete = serviceTickets.FirstOrDefault(st => st.Id == id);
+    ticketToComplete.DateCompleted = DateTime.Today;
+    if (ticketToComplete == null)
+    {
+        return Results.NotFound();
+    }
+    if (id != serviceTicket.Id)
+    {
+        return Results.BadRequest();
+    }
+    return Results.Ok();
+
 });
 
 app.Run();
